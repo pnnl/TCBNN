@@ -1,4 +1,4 @@
-# TC-BNN: Tensor-Core Accelerated Binarized Neural Network
+# Tensor-Core Accelerated Binarized Neural Network
 An efficient Binarized-Neural-Network (BNN) design accelerated by 
 NVIDIA Turing Bit-Tensor-Cores. 
 Please see our paper on [arXiv](https://arxiv.org/abs/2006.16578)) for details.
