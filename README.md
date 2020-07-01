@@ -15,6 +15,12 @@ Latest version: **0.1**
 
 Despite foreseeing tremendous speedups over conventional deep neural networks, the performance advantage of binarized neural networks (BNNs) has merely been showcased on general-purpose processors such as CPUs and GPUs. In fact, due to being unable to leverage bit-level-parallelism with a word-based architecture, GPUs have been criticized for extremely low utilization (1%) when executing BNNs. Consequently, the latest tensorcores in NVIDIA Turing GPUs start to experimentally support bit computation. In this work, we look into this brand new bit computation capability and characterize its unique features. We show that the stride of memory access can significantly affect performance delivery and a data-format co-design is highly desired to support the tensorcores for achieving superior performance than existing software solutions without tensorcores. We realize the tensorcore-accelerated BNN design, particularly the major functions for fully-connect and convolution layers — bit matrix multiplication and bit convolution. Evaluations on two NVIDIA Turing GPUs show that, with ResNet-18, our BTC-BNN design can process ImageNet at a rate of 5.6K images per second, 77% faster than state-of-the-art.
 
+## Make and Run
+Update **Makefile** accordingly and make. You will need a NVIDIA Turing GPU (Compute Capability-7.5) to be able to run.
+```text
+make
+```
+
 ## Authors 
 
 #### [Ang Li](http://www.angliphd.com/), Pacific Northwest National Laboratory (PNNL)
