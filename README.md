@@ -5,8 +5,6 @@ Please see our paper on [arXiv](https://arxiv.org/abs/2006.16578)) for details.
 
 For our referencing BSTC SBNN design, please see our [SuperComputing-20 paper](https://dl.acm.org/doi/10.1145/3295500.3356169) for detail and our [SBNN repository](https://github.com/uuudown/SBNN).
 
-![alt text](example.png)
-
 ## Current version
 
 Latest version: **0.1**
