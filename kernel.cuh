@@ -368,7 +368,7 @@ __device__ __inline__ void InConv128Layer(InConv128LayerParam* p)
         {
             // save shape[batch, output_height, output_width, out_channels/64]
             bool bin = (float)(Csub[k*32+laneid])<(p->bn_gpu)[k*32+laneid]?0:1;
-            unsigned C = __brev(__ballot(bin));
+            unsigned C = __brev(__ballot_sync( 0xFFFFFFFF, bin));
             if (laneid==0) atomicOr(&p->output_gpu[idx+k], C); //Q
         }
         if (p->save_residual)
@@ -533,7 +533,9 @@ __device__ __inline__ void Conv128Layer(Conv128LayerParam* p)
                 res += residual;
             }
 
-            unsigned C = __brev(__ballot((float)res<(p->bn_gpu[bo*32+laneid])?0:1));
+            unsigned C = __brev(__ballot_sync( 0xFFFFFFFF, 
+                        (float)res<(p->bn_gpu[bo*32+laneid])?0:1));
+
 
             if (p->ahead_fc)
             {
@@ -651,7 +653,8 @@ __device__ __inline__ void InConv128LayerFMT(InConv128LayerParam* p)
         {
             // save shape[batch, output_height, output_width, out_channels/64]
             bool bin = (float)(Csub[k*32+laneid])<(p->bn_gpu)[k*32+laneid]?0:1;
-            unsigned C = __brev(__ballot(bin));
+            unsigned C = __brev(__ballot_sync(0xFFFFFFFF, bin));
+
             //if (laneid==0) atomicOr(&p->output_gpu[idx+bz*otm*4+k], C); //Q
             if (laneid==0) atomicOr(&p->output_gpu[idx
                     +((bz/8)*otm+k/4)*32+((bz%8)*4+k%4)], C); //Q
@@ -789,8 +792,8 @@ __device__ __inline__ void Conv128LayerFMT(Conv128LayerParam* p)
                 }
                 res += residual;
             }
- 
-            unsigned C = __brev(__ballot((float)res<(p->bn_gpu[bo*32+laneid])?0:1));
+            unsigned C = __brev(__ballot_sync(0xFFFFFFFF,
+                        (float)res<(p->bn_gpu[bo*32+laneid])?0:1));
 
             if (p->ahead_fc)
             {
