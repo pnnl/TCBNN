@@ -549,7 +549,7 @@ __global__ void PackFiltersByInChannels128(const float* __restrict__ filter,
         // From shape[filter_height, filter_width, input_channels, output_channels] 
         float f0 = ((c*32+laneid)<input_channels)? filter[bx*input_channels*output_channels 
             + (c*32+laneid)*output_channels + by]:-1.0f;
-        unsigned r0 = __brev(__ballot(f0>=0));
+        unsigned r0 = __brev(__ballot_sync(0xFFFFFFFF, f0>=0));
         if (laneid == 0) //avoid warp conflict
             // To shape[filter_height, filter_width, output_channels, input_channels/32]
             filter_binarized[bx*PAD32(output_channels)*ins+ by*ins + c] = r0;
@@ -572,7 +572,7 @@ __global__ void PackFiltersByInChannels128FMT(const float* __restrict__ filter,
         // From shape[filter_height, filter_width, input_channels, output_channels] 
         float f0 = ((c*32+laneid)<input_channels)? filter[bx*input_channels*output_channels 
             + (c*32+laneid)*output_channels + by]:-1.0f;
-        unsigned r0 = __brev(__ballot(f0>=0));
+        unsigned r0 = __brev(__ballot_sync(0xFFFFFFFF, f0>=0));
         if (laneid == 0) //avoid warp conflict
             //filter_binarized[bx*PAD32(output_channels)*ins+ by*ins + c] = r0;
             filter_binarized[bx*PAD32(output_channels)*ins
@@ -625,7 +625,7 @@ __global__ void PackFiltersByOutChannels32(const float* __restrict__ filter,
         // From shape[filter_height, filter_width, in_channels, out_channels] 
         float f0 = ((k*32+laneid)<out_channels)? filter[bx*in_channels*out_channels 
             + by*out_channels + k*32 + laneid]:-1.0f;
-        unsigned r0 = __brev(__ballot(f0>=0));
+        unsigned r0 = __brev(__ballot_sync(0xFFFFFFFF, f0>=0));
         // To shape[filter_height, filter_width, in_channels, out_channels/32]
         filter_binarized[bx*ots*in_channels+ by*ots + k] = r0;
     }
