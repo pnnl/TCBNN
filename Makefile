@@ -20,9 +20,9 @@ LIBS = -ljpeg
 
 #all: cifar10_resnet mnist_mlp cifar10_vgg
 #all: imagenet_vgg imagenet_alexnet imagenet_resnet
-#all: imagenet_resnet cifar10_resnet mnist_mlp cifar10_vgg imagenet_alexnet imagenet_vgg
+all: imagenet_resnet cifar10_resnet mnist_mlp cifar10_vgg imagenet_alexnet imagenet_vgg
 
-all: benn_scaleup 
+#all: benn_scaleup 
 
 
 
