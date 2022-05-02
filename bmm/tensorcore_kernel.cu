@@ -79,7 +79,7 @@ __global__ void BMMA_toBit32Col(const T* __restrict__ A, unsigned* B,
     const unsigned bx = blockIdx.x;
     const unsigned by = blockIdx.y; 
     T f0 = A[(bx*32+laneid)*A_width+by];
-    unsigned r0 = __brev(__ballot(f0>=0?1:0));
+    unsigned r0 = __brev(__ballot_sync(0xffffffff, f0>=0?1:0));
     if (laneid == 0) B[(by*A_height/32)+bx] = r0;
 }
 
@@ -92,7 +92,7 @@ __global__ void BMMA_toBit32Row(const T* __restrict__ A, unsigned* B,
     const unsigned bx = blockIdx.x;
     const unsigned by = blockIdx.y; 
     T f0 = A[bx*A_width+by*32+laneid];
-    unsigned r0 = __brev(__ballot(f0>=0?1:0));
+    unsigned r0 = __brev(__ballot_sync(0xffffffff, f0>=0?1:0));
     if (laneid == 0) B[(bx*A_width/32)+by] = r0;
 }
 
@@ -110,7 +110,7 @@ __global__ void BMMA_toBit32Col_new(const T* __restrict__ A, unsigned* B,
     const unsigned wy = threadIdx.z;
 
     T f0 = A[(bx*128+wx*32+laneid)*A_width+(by*8)+wy];
-    unsigned r0 = __brev(__ballot(f0>=0?1:0));
+    unsigned r0 = __brev(__ballot_sync(0xffffffff, f0>=0?1:0));
     //if (laneid == 0) B[((by*8+wy)*A_height/32)+wx] = r0;
     if (laneid == 0) B[(by*gridDim.x+bx)*8*(128/(4*8))+wy*128/(4*8)+wx] = r0;
 }
@@ -127,7 +127,7 @@ __global__ void BMMA_toBit32Row_new(const T* __restrict__ A, unsigned* B,
     const unsigned wy = threadIdx.z;
 
     T f0 = A[(bx*8+wx)*A_width+by*128+wy*32+laneid];
-    unsigned r0 = __brev(__ballot(f0>=0?1:0));
+    unsigned r0 = __brev(__ballot_sync(0xffffffff, f0>=0?1:0));
     //if (laneid == 0) B[(bx*8+wx)*A_width/32+wy] = r0;
     if (laneid == 0) B[(bx*gridDim.y+by)*8*128/(4*8)+wx*128/(4*8)+wy] = r0;
 }
@@ -296,7 +296,7 @@ __global__ void BMMA_bin(const unsigned *A, const unsigned *B, unsigned *C,
     {
         for (unsigned j=0; j<(N/4); j++)
         {
-            unsigned r0 = __ballot((((float)A_width*128)-2*(float)Cs[i][j]>=0));
+            unsigned r0 = __ballot_sync(0xffffffff, (((float)A_width*128)-2*(float)Cs[i][j]>=0));
             if (laneid == 0) C[(bx*8*M+i)*(B_height/32)+by*(N/4)+j] = r0;
         }
     }
@@ -356,8 +356,6 @@ __global__ void BMMAS_new(const unsigned *A, const unsigned *B, int *C, const un
 }
 
 
-
-
 template<int M>
 __global__ void BMMAS_bin(const unsigned *A, const unsigned *B, unsigned *C, const unsigned A_height, const unsigned B_height, const unsigned A_width)
 {
@@ -390,8 +388,8 @@ endloop:
     store_matrix_sync(Cs, c_frag, 8, wmma::mem_row_major);
 
     union{ unsigned data; uchar elements[4];} p0, p1;
-    p0.data =  __ballot((((float)A_width)-2*(float)Cs[laneid]>=0));
-    p1.data =  __ballot((((float)A_width)-2*(float)Cs[32+laneid]>=0));
+    p0.data =  __ballot_sync(0xffffffff, (((float)A_width)-2*(float)Cs[laneid]>=0));
+    p1.data =  __ballot_sync(0xffffffff, (((float)A_width)-2*(float)Cs[32+laneid]>=0));
 
     if (laneid < 4)
     {
@@ -441,8 +439,8 @@ __global__ void BMMAS_bin_new(const unsigned *A, const unsigned *B, unsigned *C,
     store_matrix_sync(Cs, c_frag, 8, wmma::mem_col_major); //This can be row or col major
 
     union{ unsigned data; uchar elements[4];} p0, p1;
-    p0.data = __ballot(((A_width)-2*Cs[laneid]>=0));
-    p1.data = __ballot(((A_width)-2*Cs[32+laneid]>=0));
+    p0.data = __ballot_sync(0xffffffff, ((A_width)-2*Cs[laneid]>=0));
+    p1.data = __ballot_sync(0xffffffff, ((A_width)-2*Cs[32+laneid]>=0));
 
     if (laneid < 4)
     {

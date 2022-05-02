@@ -12,7 +12,7 @@
  
 CC = nvcc
 
-FLAGS = -arch=sm_75 -O3 -std=c++11 -w # -Xptxas --maxrregcount=96 
+FLAGS = -arch=sm_80 -O3 -std=c++11 -w # -Xptxas --maxrregcount=96 
 LINK = -lcublas
 
 bmm: benchmark-bmm.cu matmul_kernel.cu binary_kernels.cu tensorcore_kernel.cu

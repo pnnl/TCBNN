@@ -53,7 +53,7 @@ __global__ void ToBit32Col(const T* __restrict__ A, unsigned* B,
     for (int i=0; i<32; i++) 
     {
         T f0 = A[(bx*32+i)*A_width+by*32 +laneid];
-        unsigned r0 = __brev(__ballot(f0>=0?1:0));
+        unsigned r0 = __brev(__ballot_sync(0xffffffff, f0>=0?1:0));
         if (laneid == i) Bval = r0;
     }
     B[by*A_height+bx*32+laneid] = Bval;
@@ -76,7 +76,7 @@ __global__ void ToBit32ColUd(const T* __restrict__ A, unsigned* B,
     {
         T f0 = ( (by*32+laneid<A_width) && (bx*32+i<A_height) )?
             A[(bx*32+i)*A_width+by*32 +laneid]:(T)-1;
-        unsigned r0 = __brev(__ballot(f0>=0?1:0));
+        unsigned r0 = __brev(__ballot_sync(0xffffffff, f0>=0?1:0));
         if (laneid == i) Bval = r0;
     }
     if (laneid < A_height*A_width)
@@ -140,7 +140,7 @@ __global__ void Bit32ColTo(const unsigned* __restrict__  A, T* B,
 #pragma unroll
     for (int i=0; i<32; i++) 
     {
-        unsigned r0 = __shfl(Aval, i); //from lane-i
+        unsigned r0 = __shfl_sync(0xffffffff, Aval, i); //from lane-i
         B[(32*bx+i)*A_width*32+by*32+laneid] = (T)((r0>>(31-laneid)) & 0x1);
     }
 }
@@ -177,8 +177,8 @@ __global__ void ToBit64Col(const T* __restrict__ A, ullong* B, const int A_heigh
     {
         T f0 = A[(bx*32+i)*A_width+by*64+laneid];
         T f1 = A[(bx*32+i)*A_width+by*64+32+laneid];
-        unsigned r0 = __ballot(f0>=0);
-        unsigned r1 = __ballot(f1>=0);
+        unsigned r0 = __ballot_sync(0xffffffff, f0>=0);
+        unsigned r1 = __ballot_sync(0xffffffff, f1>=0);
         ullong l0;
         asm volatile("mov.b64 %0, {%1,%2};":"=l"(l0):"r"(r0),"r"(r1)); //lo,hi
         if (laneid == i) Bval = __brevll(l0);
@@ -205,8 +205,8 @@ __global__ void ToBit64ColUd(const T* __restrict__ A, ullong* B, const int A_hei
         T f1 = ( (by*64+32+laneid<A_width) && (bx*32+i<A_height) )?
             A[(bx*32+i)*A_width+by*64 + 32 +laneid]:(T)-1;
 
-        unsigned r0 = __ballot(f0>=0);
-        unsigned r1 = __ballot(f1>=0);
+        unsigned r0 = __ballot_sync(0xffffffff, f0>=0);
+        unsigned r1 = __ballot_sync(0xffffffff, f1>=0);
         ullong l0;
         asm volatile("mov.b64 %0, {%1,%2};":"=l"(l0):"r"(r0),"r"(r1)); //lo,hi
         if (laneid == i) Bval = __brevll(l0);
@@ -274,8 +274,8 @@ __global__ void Bit64ColTo(const ullong* __restrict__ A, T* B, const int A_heigh
 #pragma unroll
     for (int i=0; i<32; i++)
     {
-        unsigned r2 = __shfl(r0, i); //from lane-i, only 32-bit shuffle is allowed
-        unsigned r3 = __shfl(r1, i); //r2 left, r3 right
+        unsigned r2 = __shfl_sync(0xffffffff, r0, i); //from lane-i, only 32-bit shuffle is allowed
+        unsigned r3 = __shfl_sync(0xffffffff, r1, i); //r2 left, r3 right
         B[(32*bx+i)*A_width*64+by*64+laneid] = (T)((r2>>(31-laneid)) & 0x1);
         B[(32*bx+i)*A_width*64+by*64+32+laneid] = (T)((r3>>(31-laneid)) & 0x1);
     }
@@ -317,7 +317,7 @@ __global__ void BMM32_Arow_Bcol(const unsigned* __restrict__ A, const unsigned* 
         #pragma unroll
         for (int j=0; j<32; j++)
         {
-            unsigned r2 = __ballot( (r1>>j) & 0x1);
+            unsigned r2 = __ballot_sync(0xffffffff, (r1>>j) & 0x1);
             Cm[j] += __popc(r0 ^ r2) ;
         }
     }
@@ -360,7 +360,7 @@ BMM32_Arow_Brow(const unsigned* __restrict__ A, const unsigned* __restrict__ B,
         #pragma unroll
         for (int j=0; j<32; j++)
         {
-            unsigned r2 = __shfl(r1, j); //from lane-j, r1 of matrix B
+            unsigned r2 = __shfl_sync(0xffffffff, r1, j); //from lane-j, r1 of matrix B
             Cm[j] += __popc(r0 ^ r2); //can remove C to exploit register reuse
         }
     }
@@ -401,13 +401,13 @@ __global__ void BMM32_Acol_Bcol(const unsigned* __restrict__ A, const unsigned* 
 #pragma unroll
         for (int j=0; j<32; j++)
         {
-            unsigned r3 = __ballot( (r0>>j) & 0x1);
+            unsigned r3 = __ballot_sync(0xffffffff, (r0>>j) & 0x1);
             if (laneid == 31-j) r1 = r3;
         }
 #pragma unroll
         for (int j=0; j<32; j++)
         {
-            unsigned r4 = __ballot( (r2>>(j)) & 0x1);
+            unsigned r4 = __ballot_sync(0xffffffff, (r2>>(j)) & 0x1);
             Cm[j] += __popc(r1 ^ r4); 
         }
     }
@@ -437,7 +437,7 @@ __global__ void BMM32_Acol_Brow(const unsigned* __restrict__ A, const unsigned* 
         #pragma unroll
         for (int j=0; j<32; j++)
         {
-            unsigned r2 = __ballot( (r0>>j) & 0x1);
+            unsigned r2 = __ballot_sync(0xffffffff, (r0>>j) & 0x1);
             Cm[j] += __popc(r1 ^ r2) ;
         }
     }
@@ -467,7 +467,7 @@ __global__ void BMM32_Arow_Brow_UD(const unsigned* __restrict__ A, const unsigne
 #pragma unroll
         for (int j=0; j<32; j++)
         {
-            unsigned r2 = __shfl(r1, j); //from lane-j, r1 of matrix B
+            unsigned r2 = __shfl(0xffffffff, r1, j); //from lane-j, r1 of matrix B
             Cm[j] += __popc(r0 ^ r2); //can remove C to exploit register reuse
         }
     }
@@ -502,8 +502,8 @@ __global__ void BMM64_Arow_Bcol(const ullong* __restrict__ A, const ullong* __re
         ullong a1 = __brevll(Asub[i*A_height+32+laneid]);
 #pragma unroll
         for (int j=0; j<64; j++) {
-            unsigned u0 = __ballot( (b0>>j) & 0x1);
-            unsigned u1 = __ballot( (b1>>j) & 0x1);
+            unsigned u0 = __ballot_sync(0xffffffff, (b0>>j) & 0x1);
+            unsigned u1 = __ballot_sync(0xffffffff, (b1>>j) & 0x1);
             ullong l0;
             asm volatile("mov.b64 %0, {%1,%2};":"=l"(l0):"r"(u0),"r"(u1));
             Cm[j] += (__popcll(a0^l0)<<16) + __popcll(a1^l0);
@@ -543,8 +543,8 @@ __global__ void BMM64_Arow_Brow(const ullong* __restrict__ A, const ullong* __re
         #pragma unroll
         for (int j=0; j<32; j++)
         {
-            ullong l0 = __shfl(b0,j);
-            ullong l1 = __shfl(b1,j);
+            ullong l0 = __shfl_sync(0xffffffff,b0,j);
+            ullong l1 = __shfl_sync(0xffffffff,b1,j);
             Cm[j] += (__popcll(a0^l0)<<16) + __popcll(a1^l0);
             Cm[32+j] += (__popcll(a0^l1)<<16) + __popcll(a1^l1);
         }
@@ -584,8 +584,8 @@ __global__ void BMM64_Arow_Brow_UD(const ullong* __restrict__ A, const ullong* _
         #pragma unroll
         for (int j=0; j<32; j++)
         {
-            ullong l0 = __shfl(b0,j);
-            ullong l1 = __shfl(b1,j);
+            ullong l0 = __shfl_sync(0xffffffff,b0,j);
+            ullong l1 = __shfl_sync(0xffffffff,b1,j);
             Cm[j] += (__popcll(a0^l0)<<16) + __popcll(a1^l0);
             Cm[32+j] += (__popcll(a0^l1)<<16) + __popcll(a1^l1);
 
@@ -670,7 +670,7 @@ __global__ void BMM32_BIN(const unsigned* __restrict__ A, const unsigned* __rest
 #pragma unroll
         for (int j=0; j<32; j++)
         {
-            unsigned r2 = __shfl(r1, j); //from lane-j, r1 of weight matrix
+            unsigned r2 = __shfl_sync(0xffffffff, r1, j); //from lane-j, r1 of weight matrix
             Cm[j] += __popc(r0 ^ r2);
         }
     }
@@ -700,7 +700,7 @@ __global__ void BMM32S_BIN(const unsigned* __restrict__ A, const unsigned* __res
         unsigned r1 = Bsub[i*k+laneid];
         Cc += __popc(r0 ^ r1);
     }
-    unsigned r2 = __ballot(n-2*(float)Cc>=0);
+    unsigned r2 = __ballot_sync(0xffffffff, n-2*(float)Cc>=0);
     Csub[warpid] = __brev(r2);
 }
 
@@ -723,8 +723,8 @@ __global__ void BMM64_BIN(const ullong* __restrict__ A, const ullong* __restrict
         #pragma unroll
         for (int j=0; j<32; j++)
         {
-            ullong l0 = __shfl(b0,j);
-            ullong l1 = __shfl(b1,j);
+            ullong l0 = __shfl_sync(0xffffffff, b0,j);
+            ullong l1 = __shfl_sync(0xffffffff, b1,j);
             Cm[j] += (__popcll(a0^l0)<<16) + __popcll(a1^l0);
             Cm[32+j] += (__popcll(a0^l1)<<16) + __popcll(a1^l1);
 
@@ -766,10 +766,10 @@ __global__ void BMM64S_BIN(const ullong* __restrict__ A, const ullong* __restric
         C2 += __popcll(a0 ^ b1);
         C3 += __popcll(a1 ^ b1);
     }
-    unsigned r0 = __ballot((((float)64*n)-2*(float)C0>=0));
-    unsigned r1 = __ballot((((float)64*n)-2*(float)C2>=0));
-    unsigned r2 = __ballot((((float)64*n)-2*(float)C1>=0));
-    unsigned r3 = __ballot((((float)64*n)-2*(float)C3>=0));
+    unsigned r0 = __ballot_sync(0xffffffff, (((float)64*n)-2*(float)C0>=0));
+    unsigned r1 = __ballot_sync(0xffffffff, (((float)64*n)-2*(float)C2>=0));
+    unsigned r2 = __ballot_sync(0xffffffff, (((float)64*n)-2*(float)C1>=0));
+    unsigned r3 = __ballot_sync(0xffffffff, (((float)64*n)-2*(float)C3>=0));
 
     ullong l0,l1;
     asm volatile("mov.b64 %0, {%1,%2};":"=l"(l0):"r"(r0),"r"(r1));//lo,hi
