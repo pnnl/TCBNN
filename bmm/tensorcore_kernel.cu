@@ -319,8 +319,8 @@ __global__ void BMMAS(const unsigned *A, const unsigned *B, int *C, const unsign
         for (int j=i; j<i+M; j++)
         {
             if (j==(k/128)) goto endloop;
-            load_matrix_sync(a_frag, A + bx*8*k/32 + j*128/32, k);
-            load_matrix_sync(b_frag, B + by*8*k/32 + j*128/32, k);
+            load_matrix_sync(a_frag, A + bx*8*k/32 + j*128/32, k); //M
+            load_matrix_sync(b_frag, B + by*8*k/32 + j*128/32, k); //N
             bmma_sync(c_frag, a_frag, b_frag, c_frag);
         }
     }
@@ -328,7 +328,7 @@ endloop:
 
     #pragma unroll
     for (int i=0; i<c_frag.num_elements; i++)
-        c_frag.x[i] = n - 2*c_frag.x[i]; 
+        c_frag.x[i] = k - 2*c_frag.x[i]; 
     store_matrix_sync(C+(bx*8*n+by*8), c_frag, n, wmma::mem_row_major);
 }
 
@@ -351,7 +351,7 @@ __global__ void BMMAS_new(const unsigned *A, const unsigned *B, int *C, const un
     }
     #pragma unroll
     for (int i=0; i<c_frag.num_elements; i++)
-        c_frag.x[i] = n - 2*c_frag.x[i]; 
+        c_frag.x[i] = k - 2*c_frag.x[i]; 
     store_matrix_sync(C+(bx*8*n+by*8), c_frag, n, wmma::mem_row_major);
 }
 
