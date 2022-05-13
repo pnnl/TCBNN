@@ -459,15 +459,16 @@ __global__ void BMM32_Arow_Brow_UD(const unsigned* __restrict__ A, const unsigne
     const unsigned* Bsub = &B[blockIdx.y*32];
     T* Csub = &C[blockIdx.x*B_width*32+blockIdx.y*32];
     register unsigned Cm[32] = {0};
+    const int steps = (A_width+31)/32*32;
 
-    for (int i = 0; (i*32) < A_width; i++)
+    for (int i = 0; (i*32) < steps; i++)
     {
         unsigned r0 = Asub[i*32*gridDim.x+laneid]; 
         unsigned r1 = Bsub[i*32*gridDim.y+laneid];
 #pragma unroll
         for (int j=0; j<32; j++)
         {
-            unsigned r2 = __shfl(0xffffffff, r1, j); //from lane-j, r1 of matrix B
+            unsigned r2 = __shfl_sync(0xffffffff, r1, j); //from lane-j, r1 of matrix B
             Cm[j] += __popc(r0 ^ r2); //can remove C to exploit register reuse
         }
     }
@@ -574,8 +575,9 @@ __global__ void BMM64_Arow_Brow_UD(const ullong* __restrict__ A, const ullong* _
     const ullong* Bsub = &B[blockIdx.y*64];
     T* Csub = &C[blockIdx.x*B_width*64+blockIdx.y*64];
     register unsigned Cm[64] = {0};
+    const int steps = (A_width+63)/64*64;
 
-    for (int i = 0; (i*64) < A_width; i++)
+    for (int i = 0; (i*64) < steps; i++)
     {
         ullong a0 = (Asub[i*64*gridDim.x+laneid]);
         ullong a1 = (Asub[i*64*gridDim.x+32+laneid]);
@@ -727,7 +729,6 @@ __global__ void BMM64_BIN(const ullong* __restrict__ A, const ullong* __restrict
             ullong l1 = __shfl_sync(0xffffffff, b1,j);
             Cm[j] += (__popcll(a0^l0)<<16) + __popcll(a1^l0);
             Cm[32+j] += (__popcll(a0^l1)<<16) + __popcll(a1^l1);
-
         }
     }
     ullong C0 = 0;
